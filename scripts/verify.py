@@ -11,18 +11,14 @@ import collections
 
 VALID_ID_IGNORE_CASE = re.compile(r'^ocd-division/country:[a-z]{2}(/[^\W\d]+:[\w.~-]+)*$', re.U)
 
-# Decorator to replace single parameter functions with no-ops in python3
-def python2(func):
-    if sys.version_info >= (3, 0):
-        return lambda x:x
-    return func
-
-@python2
-def unicode_row_reader(reader):
+def unicode_csv_reader(f, encoding='utf-8'):
+    reader = csv.reader(f)
     for row in reader:
-        yield [unicode(field, 'utf-8') for field in row]
+       if sys.version < '3':
+           yield [unicode(field, encoding) for field in row]
+       else:
+           yield row
 
-@python2
 def utf8_row(row):
     return [field.encode('utf-8') for field in row]
 
@@ -44,7 +40,7 @@ if __name__ == '__main__':
 
     for filename in glob.glob('identifiers/country-{0}/*.csv'.format(country)):
         print('processing', filename)
-        for id_, name in unicode_row_reader(csv.reader(open(filename))):
+        for id_, name in unicode_csv_reader(open(filename)):
             all_rows.append((id_, name))
 
             # check for dupes
@@ -98,7 +94,7 @@ if __name__ == '__main__':
     all_geo_rows = list()
     if country == 'us':
         for filename in glob.glob('mappings/us-census-geoids/*.csv'):
-            for id_, geoid in unicode_row_reader(csv.reader(open(filename))):
+            for id_, geoid in unicode_csv_reader(open(filename)):
                 seen_in_geoid.add(id_)
                 if id_ not in ids:
                     print('unexpected geoid for', id_)
